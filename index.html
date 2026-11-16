@@ -1,1 +1,117 @@
+q進度|study plan progress|学習計画/i],['done',/已完成事項|completed items|完了/i]];
+function blockKey(el){if(el.id&&HID[el.id])return HID[el.id];if(el.classList.contains('dashboard-stat-grid'))return 'stats';if(el.classList.contains('dashboard-course'))return 'live';const tx=(el.textContent||'').slice(0,60);for(const r of HRX)if(r[1].test(tx))return r[0];return ''}
+function tagHome(){try{const m=$('main');if(!m)return;const isToday=(typeof page!=='undefined'&&page==='today');m.classList.toggle('cz-homeflex',isToday&&(cz().home.order.length>0||Object.keys(cz().home.hide).some(k=>cz().home.hide[k])));if(!isToday)return;
+ const o=ordList(HOME,cz().home),hd=cz().home.hide;[...m.children].forEach(el=>{let k=el.dataset.czk;if(!k){k=blockKey(el);if(k)el.dataset.czk=k}if(!k){el.style.order='';return}el.style.order=String(o.indexOf(k)+1);el.classList.toggle('cz-hidden',!!hd[k])})}catch(e){console.warn('[cz home]',e)}}
+/* 加號面板 */
+function plusKey(b){const oc=b.getAttribute('onclick')||'';if(b.dataset.voiceEntry!==undefined||/voice/i.test(b.className+(b.dataset.sxV||'')))return 'voice';if(b.dataset.sx21)return b.dataset.sx21;const m=oc.match(/openAdd\('(\w+)'\)/);if(m)return {assignment:'assignment',exam:'exam',course:'course',other:'other',prep:'prep',snap:'snap'}[m[1]]||'';if(/__sgOpenPlanAdd/.test(oc))return 'plan';return ''}
+function tagPlus(){try{const g=document.querySelector('#modalRoot .quick-category-grid');if(!g)return;const o=ordList(PLUS,cz().plus),hd=cz().plus.hide;[...g.querySelectorAll('.quick-category')].forEach(b=>{let k=b.dataset.czk;if(!k){k=plusKey(b);if(!k&&/錄音|Voice note|音声/i.test(b.textContent))k='voice';if(k)b.dataset.czk=k}if(!k)return;b.style.order=String(o.indexOf(k)+1);b.classList.toggle('cz-hidden',!!hd[k])});g.classList.add('cz-plusflex')}catch(e){console.warn('[cz plus]',e)}}
+/* 任務表單欄位 */
+function taskForm(){try{const f=cz().taskf,mr=$('modalRoot');if(!mr)return;const map={subject:['subject'],quadrant:['quadrant'],note:['note'],recur:['recurrenceType']};Object.keys(map).forEach(k=>{map[k].forEach(nm=>{mr.querySelectorAll('[name="'+nm+'"]').forEach(el=>{if(el.closest('form,.modal')&&mr.querySelector('[name="title"],[name="date"]')){let w=el.parentElement;if(w&&w.matches&&w.matches('.modal,form'))w=el;const on=f[k];w.classList.toggle('cz-hidden',!on);if(k==='recur'){const iv=mr.querySelector('.recurrence-interval-wrap,.recurrence-interval-row');if(iv)iv.classList.toggle('cz-hidden',!on)}}})})})}catch(e){}}
+/* 目標 */
+function goalLine(){try{const g=cz().goal.day;const el=$('drawerFocusToday');if(!el)return;const host=el.parentElement;let l=host.querySelector('.cz-goal');if(!g){if(l)l.remove();return}const fs=(db.focusStats&&db.focusStats.date===today())?db.focusStats.seconds:0,p=Math.min(100,Math.round(fs/60/g*100));if(!l){l=document.createElement('div');l.className='cz-goal';host.appendChild(l)}l.innerHTML='<div class="cz-gb"><i style="width:'+p+'%"></i></div><small>'+esc(T('今日目標 {a}/{b} 分鐘',{a:Math.round(fs/60),b:g}))+'</small>'}catch(_){}}
+/* 提醒 */
+window.__sgCzReminders=function(list){try{const c=cz();for(let i=list.length-1;i>=0;i--){const r=list[i],k=c.rem[r.kind];if(k){if(k.on===false){list.splice(i,1);continue}if(k.extra>0){r.at-=k.extra*60000}}
+  if(c.quiet.on&&!(c.quiet.exam&&r.kind==='exam')){const d=new Date(r.at),mm=d.getHours()*60+d.getMinutes(),f=hm(c.quiet.from),t=hm(c.quiet.to);const inq=f<=t?(mm>=f&&mm<t):(mm>=f||mm<t);if(inq){const e=new Date(r.at);e.setHours(Math.floor(t/60),t%60,0,0);if(f>t&&mm>=f)e.setDate(e.getDate()+1);if(e.getTime()>r.at){const sh=e.getTime()-r.at;r.at+=sh;if(r.grace)r.grace=Math.max(0,r.grace-sh)}}}}}catch(e){console.warn('[cz rem]',e)}};
+window.__sgCzPost=function(list){try{const c=cz();list.forEach(r=>{const tp=r.kind==='exam'?c.rem.tpl.exam:r.kind==='task'?c.rem.tpl.task:'';if(!tp||!r.sub||r.merged)return;const days=r.dt?Math.round((new Date(r.dt+'T12:00:00')-new Date(new Date().toDateString()+' 12:00'))/864e5):'';r.body=tp.replace(/\{(科目|標題|subject)\}/g,r.sub).replace(/\{(天數|days)\}/g,days).replace(/\{(日期|date)\}/g,r.dt||'').replace(/\{(原文|text)\}/g,r.body)})}catch(e){}return list};
+/* 匯出檔名 */
+(function(){const f=window.downloadJsonPayload;if(typeof f!=='function'||f.__cz)return;const w=function(p,name){try{const tp=cz().exp.name;if(tp&&/\.(con|json)$/i.test(name||'')){const d=new Date(),ext=name.match(/\.(con|json)$/i)[0];name=tp.replace(/\{date\}/g,ymd(d)).replace(/\{time\}/g,pad(d.getHours())+pad(d.getMinutes())).replace(/[\\/:*?"<>|]/g,'_')+ext}}catch(_){}return f.call(this,p,name)};w.__cz=1;window.downloadJsonPayload=w})();
+/* 自習室：記住版面、退出鍵淡化 */
+(function(){const K='sg.cz.srmode';document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#sgModeBar [data-sgm]');if(b){try{localStorage.setItem(K,b.dataset.sgm)}catch(_){}}},true);
+ const o=window.openStudyRoom;if(typeof o==='function'&&!o.__cz){const w=function(){const r=o.apply(this,arguments);try{if(cz().sr.rem){const m=localStorage.getItem(K);if(m)[300,900].forEach(ms=>setTimeout(()=>{const bar=$('sgModeBar');if(!bar)return;const b=bar.querySelector('[data-sgm="'+m+'"]');if(b&&!b.classList.contains('on')&&!b.classList.contains('active')&&b.getAttribute('aria-pressed')!=='true'&&b.getAttribute('aria-checked')!=='true')b.click()},ms))}}catch(_){}return r};w.__cz=1;window.openStudyRoom=w}
+ const wake=()=>{const H=document.documentElement;H.classList.remove('cz-dimmed');clearTimeout(dimT);if(H.classList.contains('cz-dim'))dimT=setTimeout(()=>H.classList.add('cz-dimmed'),3000)};['pointerdown','mousemove','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,wake,{passive:true}))})();
+/* 課程表單：色彩欄位增強 */
+function enhanceForm(){try{const mr=$('modalRoot');if(!mr)return;const s=mr.querySelector('select[name="color"]');if(!s||s.dataset.cz)return;s.dataset.cz='1';
+ const wrap=document.createElement('div');wrap.className='cz-fc';const fav=[0,1,2,3,4,5,6];
+ const draw=()=>{const cur=Number(s.value)||0;wrap.innerHTML=fav.concat(cur>6?[cur]:[]).map(i=>{const c=COLORS[i]||COLORS[0];return '<button type="button" class="cz-g s'+(i===cur?' on':'')+'" data-i="'+i+'" style="background:'+c[0]+';color:'+c[1]+'"><span>'+esc(T('科目'))+'</span></button>'}).join('')+'<button type="button" class="cz-btn sm" data-more="1">🎨 '+esc(T('更多顏色'))+'</button>'};
+ s.style.display='none';s.after(wrap);draw();
+ wrap.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();if(b.dataset.i!==undefined){s.value=b.dataset.i;s.dataset.czTouched='1';draw()}else if(b.dataset.more){V.pick={from:'hub',cb:i=>{if(![...s.options].some(o=>+o.value===i)){const o=document.createElement('option');o.value=i;o.textContent='#'+i;s.appendChild(o)}s.value=i;s.dataset.czTouched='1';draw()}};V.k='pick';initColors();const el=ensureOv();el.classList.add('on');document.documentElement.classList.add('cz-open');lockScroll(true);czPaint()}});
+ const sub=mr.querySelector('[name="subject"]');if(sub)sub.addEventListener('input',()=>{if(s.dataset.czTouched)return;const m=cz().subj[normS(sub.value)];if(m){const i=colorIdx(m.bg,m.fg);if(![...s.options].some(o=>+o.value===i)){const o=document.createElement('option');o.value=i;s.appendChild(o)}s.value=i;draw()}});
+ /* 儲存時，若這個科目已有指定顏色就記下新的選擇 */
+}catch(e){console.warn('[cz form]',e)}}
+/* 儲存課程後：把科目顏色同步到 map（手動改色時更新該科目） */
+(function(){const f=window.save;if(typeof f!=='function'||f.__cz)return;const w=function(){try{(db.courses||[]).forEach(c=>{const n=normS(c.subject);if(!n)return;const m=cz().subj[n];const col=COLORS[(c.color||0)%COLORS.length];if(m&&(m.bg!==col[0]||m.fg!==col[1])&&c.__czSet!==1){/* 使用者在表單手動改色：以最新為準 */cz().subj[n]={bg:col[0],fg:col[1]}}})}catch(_){}return f.apply(this,arguments)};w.__cz=1;try{window.save=w}catch(_){}})();
+/* 漢堡選單與設定入口 */
+function dKey(b){if(b.dataset.czD)return b.dataset.czD;if(b.dataset.czK)return b.dataset.czK;const o=(b.getAttribute('onclick')||'');const m=[[/openStudyRoom/,'room'],[/openWhiteNoise/,'noise'],[/openPomodoro/,'pomo'],[/openAnalytics/,'stats'],[/openNotes/,'notes'],[/snapnotes/,'snap'],[/openSettings/,'settings'],[/go\('today'\)/,'home'],[/__sgCz/,'hub']];for(const r of m)if(r[0].test(o)){b.dataset.czK=r[1];return r[1]}const tx=(b.textContent||'');if(/專注工具箱|Focus tool|集中ツール/i.test(tx)){b.dataset.czK='tools';return 'tools'}if(/學習中心|Study hub|学習センター/i.test(tx)){b.dataset.czK='learn';return 'learn'}if(/匯出|備份|Export|backup|エクスポート|バックアップ/i.test(tx)){b.dataset.czK='export';return 'export'}return ''}
+function tagDrawer(){try{const root=$('drawerRoot');if(!root)return;const panel=root.querySelector('.drawer-panel');if(!panel)return;const links=[...panel.querySelectorAll('.drawer-link')];if(!links.length)return;const st=cz().drawer,o=ordList(DRAWER,st);links.forEach(b=>{const k=dKey(b);b.classList.toggle('cz-hidden',!!k&&k!=='settings'&&!!st.hide[k])});
+ const keyed=links.filter(b=>dKey(b));const sig=o.join(',')+'|'+keyed.map(dKey).join(',');if(panel.dataset.czOrd===sig)return;
+ const slots=keyed.map(b=>{const m=document.createComment('s');b.before(m);return m});const sorted=keyed.slice().sort((a,b)=>{const ia=o.indexOf(dKey(a)),ib=o.indexOf(dKey(b));return (ia<0?99:ia)-(ib<0?99:ib)});slots.forEach((m,i)=>{m.replaceWith(sorted[i])});panel.dataset.czOrd=o.join(',')+'|'+sorted.map(dKey).join(',');panel.classList.add('cz-dpanel')}catch(e){console.warn('[cz drawer]',e)}}
+function injectDrawer(){const root=$('drawerRoot');if(root)tagDrawer();if(!root||root.querySelector('[data-cz-d]')){goalLine();return}const lab=[...root.querySelectorAll('.text-xs.tracking-widest')].find(x=>x.textContent.trim()==='學習工具'||x.textContent.trim()===T('學習工具'));if(!lab)return;
+ const mk=(a,ic,t,d)=>{const b=document.createElement('button');b.className='drawer-link';b.dataset.czD=a;b.setAttribute('onclick',"closeDrawer();setTimeout(()=>__sgCz.open('"+a+"'),260)");b.innerHTML='<span class="drawer-icon" data-sg12="1" style="display:flex;align-items:center;justify-content:center">'+svg(ic,20)+'</span><span class="flex-1">'+esc(T(t))+'<small class="block text-xs text-slate-400 font-normal mt-1">'+esc(T(d))+'</small></span><span>›</span>';return b};
+ const b1=mk('subj','palette','科目','每個科目的顏色，馬卡龍、鮮豔等 300 種配色'),b2=mk('hub','gear','個人化中心','自習室、首頁、加號面板、提醒、外觀與設定檔');lab.after(b1);b1.after(b2);goalLine();tagDrawer()}
 
+const SIK={look:'theme',room:'target',menu:'menu',classic:'sliders',home:'home',plus:'plusc',task:'checklist',goal:'target',rem:'bell',data:'archive',voice:'mic',hub:'palette'};
+function siIcon(k,lv){let d='';try{const I=window.__sg220Icons&&window.__sg220Icons.I;d=(I&&(I[SIK[k]||k]||I.gear))||''}catch(_){}return '<span class="sg220-si l'+lv+'" data-k="'+esc(SIK[k]||k)+'" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">'+d+'</svg></span>'}
+/* ---------- 設定「自定義」裡的個人化中心（與個人化中心雙向同步） ---------- */
+function hostSecs(){return SECS.filter(x=>!MVK[x[0]]).map(x=>'<details class="cz-hsec" data-id="'+x[0]+'"><summary class="sg220 cz-nosi">'+siIcon(x[0],2)+'<b>'+esc(T(x[2]))+'</b><span class="cz-ch">⌄</span></summary><div class="cz-sb">'+secH(x[0])+'</div></details>').join('')}
+function hostHTML(){return '<summary class="cz-hsum sg220 cz-nosi">'+siIcon('classic',1)+'<b>'+esc(T('與個人化中心同步的設定'))+'</b><span class="cz-ch">⌄</span></summary><div class="cz-hbody"><div class="cz-note">'+esc(T('這些設定和個人化中心是同一份，在哪邊改都會同步。'))+'</div>'+hostSecs()+'</div>'}
+function repaintHosts(){try{document.querySelectorAll('[data-cz-host]').forEach(h=>{h.querySelectorAll('.cz-hsec').forEach(d=>{const sb=d.querySelector('.cz-sb');if(sb&&d.open){const a=document.activeElement;sb.innerHTML=secH(d.dataset.id)}})})}catch(e){console.warn('[cz host]',e)}}
+function hostClick(e){const t=e.target.closest('[data-cz]');if(t&&t.dataset.cz==='subj'){try{closeModal()}catch(_){}setTimeout(()=>czOpen('subj'),200);return}czClick(e)}
+function injectHost(){const p=document.querySelector('#modalRoot .settings-modal-panel');if(!p||p.querySelector('[data-cz-host]'))return;const cu=customCat(p);if(!cu)return;const c=cu.querySelector(':scope > .settings-category-content')||cu;const h=document.createElement('details');h.className='cz-host';h.dataset.czHost='1';h.innerHTML=hostHTML();h.addEventListener('click',hostClick);h.addEventListener('input',onInput);h.addEventListener('change',onInput);c.insertBefore(h,c.firstChild)}
+const customCat=p=>[...p.querySelectorAll('details.settings-category-card')].filter(x=>!x.parentElement.closest('details')).find(x=>/自定義|自訂|Customi[sz]e|カスタム/.test((x.querySelector(':scope > summary')||{}).textContent||''));
+/* ---------- v22.2：把設定裡可自行調整的卡片整合進個人化中心（同一份控制項，內外自動同步） ---------- */
+const CGRP=['外觀','學習空間','新增與輸入','首頁與選單','目標與提醒','連線與資料'];
+const SECS=[
+ ['look','','外觀與字體','外觀','文字大小、時鐘大小、主題包','字體 文字 大小 主題 配色 顏色 外觀 導覽 圖示'],
+ ['anim','','動畫效果','外觀','動畫強度、點擊與轉場效果','動畫 特效 毛玻璃 省電 效果'],
+ ['pet','','桌面寵物','外觀','寵物樣式、動作與位置','寵物 桌寵 貓 狗'],
+ ['haptic','','觸覺震動回饋','外觀','震動總開關與各種情境','震動 觸覺 回饋 振動'],
+ ['room','','自習室','學習空間','頂部按鈕、全螢幕退出鍵、版面','自習室 全螢幕 版面 退出'],
+ ['sr','','自習室方塊','學習空間','自習室裡要顯示哪些方塊','自習室 方塊 小工具'],
+ ['tools','','專注工具','學習空間','專注工具箱的項目與預設','專注 工具 工具箱 星空'],
+ ['classic','','時間、高度、番茄鐘','學習空間','每節課時間、版面高度、番茄鐘、導覽列、首頁面板','自定義 課表 高度 寬度 節次 上課時間 番茄鐘 導覽列 首頁 面板 預覽'],
+ ['voice','','語音新增','新增與輸入','關鍵字、口語日期、語音指令','語音 關鍵字 日期 指令 錄音 語音查詢 搜尋 查詢 一句多項 麥克風'],
+ ['plusc','','底部加號與語音新增','新增與輸入','長按加號、語音新增的行為','加號 底部加號 長按 錄音 語音 添加 搜尋 查詢 快速新增 一句多項 複習計畫'],
+ ['plus','','加號快速新增面板','新增與輸入','加號面板有哪些按鈕與順序','加號 面板 按鈕 順序 新增 添加 增加 底部'],
+ ['task','','任務表單欄位','新增與輸入','新增作業與考試時顯示的欄位','表單 欄位 作業 考試 備註 新增 添加 截止 期限 優先 重複 自動完成 自動勾選 考試過期'],
+ ['menu','','漢堡選單','首頁與選單','選單項目的順序與顯示','漢堡 選單 順序 隱藏'],
+ ['home','','首頁區塊','首頁與選單','首頁要顯示哪些區塊與順序','首頁 區塊 模組 順序'],
+ ['bag','','今晚書包清單','首頁與選單','晚上的書包提醒與規則','書包 攜帶 物品 清單 提醒'],
+ ['sx','','學習方法','首頁與選單','間隔複習、閃卡、錯題、今日三件事等','學習方法 複習 閃卡 單字卡 背單字 錯題 三件事 專注 五分鐘 小提醒 督促 記憶'],
+ ['goal','','目標','目標與提醒','每日專注目標','目標 專注 每日'],
+ ['rem','','提醒與安靜時段','目標與提醒','提醒時間、安靜時段與文字範本','提醒 通知 安靜 時段 範本 勿擾 鬧鐘 小提醒'],
+ ['cal','','外部日曆同步','連線與資料','與手機日曆同步的方式','日曆 行事曆 同步 google 手機'],
+ ['data','','資料、匯出與設定檔','連線與資料','匯出、匯入與還原個人化設定','匯出 匯入 還原 設定檔 備份 換手機 轉移 導出 導入 恢復'],
+ ['rst','','還原預設','連線與資料','勾選要還原的項目，分類很細，沒勾的不受影響','還原 預設 重設 重置 恢復 清除 初始 預設值 reset default']];
+const CZI={look:'theme',anim:'sparkle',pet:'paw',haptic:'vibrate',room:'target',sr:'panelinfo',tools:'timer',classic:'sliders',voice:'mic',plusc:'plusc',plus:'plusc',task:'checklist',menu:'menu',home:'home',bag:'bag',sx:'brain',goal:'target',rem:'bell',cal:'calsync',data:'archive',rst:'archive'};
+function czIco(k){let d='';try{const I=window.__sg220Icons&&window.__sg220Icons.I;d=(I&&(I[CZI[k]||k]||I.gear))||''}catch(_){}return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+d+'</svg>'}
+/* 哪些區塊的內容是「從設定搬過來」的卡片（同一份控制項，所以在哪邊改都一樣） */
+const calCard=p=>[...p.querySelectorAll('details')].filter(x=>!x.parentElement.closest('details')).find(x=>x.classList.contains('sg-calendar-sync-category')||/外部日曆|External calendar|外部カレンダー/.test(((x.querySelector(':scope > summary')||{}).textContent||'')));
+const MV={anim:{sel:'#sgAnimCard'},sr:{sel:'#sgSrCard'},tools:{sel:'#sgToolsCard'},plusc:{sel:'#sgPlusCard'},bag:{sel:'#sgBagCard2'},sx:{sel:'#sgSxSet'},pet:{sel:'#sg13PetCard'},haptic:{sel:'#sgHapticAccordion'},cal:{fn:calCard},classic:{fn:p=>customCat(p)}};
+const MVK=Object.fromEntries(Object.keys(MV).map(k=>[k,1]));
+/* 設定頁裡改成「到個人化中心調整」的卡片（動畫效果與自定義仍留在進階設定） */
+const MOVED_OUT=['sr','tools','plusc','bag','sx','pet','haptic','cal'];
+const cardOf=(p,k)=>{const m=MV[k];return m.sel?p.querySelector(m.sel):m.fn(p)};
+const contentOf=c=>{const k=c.querySelector(':scope > .settings-category-content, :scope > .settings-category-body');return k?[...k.children]:[...c.children].filter(x=>x.tagName!=='SUMMARY')};
+let MG=null,MGM={},MGF=null,mgBusy=false,mgCssDone=false;
+const mvWraps=()=>{try{document.querySelectorAll('#sgCz .cz-mvw').forEach(x=>x.remove())}catch(_){}};
+function mvDrop(){try{if(MG)Object.values(MG).forEach(a=>a.forEach(n=>{try{n.remove()}catch(_){}}))}catch(_){}mvWraps();MG=null;MGM={};MGF=null}
+function mvStash(){try{if(!MG)return;MGF=document.createDocumentFragment();Object.values(MG).forEach(a=>a.forEach(n=>MGF.appendChild(n)));mvWraps()}catch(_){}}
+function mvTake(p){const o={};Object.keys(MV).forEach(k=>{try{const c=cardOf(p,k);if(!c)return;const ch=contentOf(c).filter(x=>!x.dataset||!x.dataset.czHost);if(ch.length){o[k]=ch;const bd=c.querySelector(':scope > .settings-category-content, :scope > .settings-category-body');MGM[k]={bid:bd&&bd.id||'',bcls:bd?String(bd.className||'').split(/\s+/).filter(x=>x&&!/^(cz-|hidden|sg-hide)/.test(x)).join(' '):'',id:c.id||'',cls:String(c.className||'').split(/\s+/).filter(x=>x&&!/^(cz-moved|sg-adv-card|taskrow|settings-category-card|settings-category-details|mb-\d+|sg-hide)$/.test(x)).join(' ')}}}catch(e){}});return o}
+/* 設定頁的樣式大多寫成「#modalRoot …」；搬進個人化中心後要有同樣的外觀，所以把這些規則複製一份給 #sgCz .cz-fr */
+function mvCss(){if(mgCssDone)return;mgCssDone=true;
+ const RX=/#modalRoot(?:\s*>?\s*\.(?:modal|settings-modal-panel|modal-enter-panel)(?![\w-]))*/g;
+ const split=s=>{const a=[];let d=0,cur='';for(const ch of s){if(ch==='('||ch==='[')d++;else if(ch===')'||ch===']')d--;if(ch===','&&d===0){a.push(cur);cur=''}else cur+=ch}a.push(cur);return a};
+ const cv=sel=>{if(sel.indexOf('#modalRoot')<0)return '';return split(sel).map(x=>x.trim()).filter(x=>/#modalRoot(?![\w-])/.test(x)).map(x=>x.replace(RX,'#sgCz .cz-fr').replace(/#sgCz \.cz-fr(?=[.:#\[])/g,'#sgCz .cz-frx')).filter(x=>x!=='#sgCz .cz-fr'&&x.indexOf('.cz-frx')<0).join(',')};
+ const out=[];
+ const walk=(rules,wrapAt)=>{let t='';for(const r of rules){try{
+  if(r.type===1){const s=cv(r.selectorText||'');if(s)t+=s+'{'+r.style.cssText+'}'}
+  else if(r.type===4){const inner=walk(r.cssRules);if(inner)t+='@media '+r.conditionText+'{'+inner+'}'}
+  else if(r.type===12){const inner=walk(r.cssRules);if(inner)t+='@supports '+r.conditionText+'{'+inner+'}'}
+ }catch(_){}}return t};
+ try{for(const sh of document.styleSheets){let rules;try{rules=sh.cssRules}catch(_){continue}if(!rules)continue;if(sh.ownerNode&&sh.ownerNode.id==='sgCzClone')continue;const t=walk(rules);if(t)out.push(t)}}catch(e){console.warn('[cz css]',e)}
+ const st=document.createElement('style');st.id='sgCzClone';st.textContent=out.join('\n');document.head.appendChild(st)}
+function mvPut(b){const k=b.dataset.czMv;const a=MG&&MG[k];if(!a||!a.length){b.innerHTML='<div class="cz-note">'+esc(T('這個設定目前載入不到，請稍後再試，或到 設定 裡找。'))+'</div>';b.dataset.done='1';return}
+ const m=MGM[k]||{},w=document.createElement('details');w.open=true;w.className='cz-mvw '+(m.cls||'');if(m.id)w.id=m.id;w.addEventListener('toggle',()=>{if(!w.open)w.open=true});{const sm=document.createElement('summary');sm.hidden=true;w.appendChild(sm)}
+ b.innerHTML='';if(m.bid)b.id=m.bid;if(m.bcls)m.bcls.split(' ').forEach(x=>{if(x)b.classList.add(x)});a.forEach(n=>b.appendChild(n));b.dataset.done='1';const par=b.parentElement;if(par){par.replaceChild(w,b);w.appendChild(b)}}
+function fillMoved(){try{const ov=OV();if(!ov||!ov.classList.contains('on'))return;
+ const boxes=[...ov.querySelectorAll('[data-cz-mv]')].filter(b=>!b.dataset.done);if(!boxes.length)return;
+ if(MG){mvCss();boxes.forEach(mvPut);return}
+ if(mgBusy)return;mgBusy=true;const H=document.documentElement;H.classList.add('cz-grab');
+ try{openSettings()}catch(e){console.warn('[cz grab open]',e)}
+ const need=['#sgSxSet','#sgToolsCard','#sgHapticAccordion','#sgPlusCard','#sgBagCard2','#sg13PetCard','#sgSrCard','#sgAnimCard'];
+ let n=0;const iv=setInterval(()=>{n++;const p=document.querySelector('#modalRoot .settings-modal-panel');
+  const ready=p&&need.every(q=>p.querySelector(q))&&customCat(p)&&calCard(p);
+  if((ready&&n>8)||n>75){clearInterval(iv);try{if(p)MG=mvTake(p);else MG={}}catch(e){MG={};console.warn('[cz take]',e)}
+   try{mvCss()}catch(_){}
+   try{closeModal()}catch(_){}
+   setTimeout(()=>{H.classList.remove('cz-grab');mgBusy=false;try{fillMoved()}catch(_){}},420)}},60)}catch(e){console.warn('[cz fill]',e);mgBusy=fal
